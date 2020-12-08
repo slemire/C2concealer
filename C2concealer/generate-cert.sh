@@ -67,28 +67,7 @@ func_apache_check(){
     echo '[Success] java is now installed'
     echo
   fi
-  if [ $(which apache2) ]; then
-    echo '[Sweet] Apache2 is already installed'
-    service apache2 start
-    echo
-  else
-    apt-get update
-    apt-get install apache2 -y 
-    echo '[Success] Apache2 is now installed'
-    echo
-    service apache2 restart
-    service apache2 start
-  fi
-  if [ $(netstat -antup | grep apache | grep LISTEN | grep -c ":80") -ge 1 ]; then  
-    echo '[Success] Apache2 is up and running!'
-  else 
-    echo
-    echo ' [ERROR]: Apache2 does not seem to be running on'
-    echo '          port 80? Try manual start?'
-    echo
-    exit 1
-  fi
-  if [ $(which ufw) ]; then
+ if [ $(which ufw) ]; then
     echo 'Looks like UFW is installed, opening ports 80 and 443'
     ufw allow 80/tcp
     ufw allow 443/tcp
@@ -97,20 +76,16 @@ func_apache_check(){
 }
 
 func_install_letsencrypt(){
-  echo '[Starting] cloning into letsencrypt!'
-  git clone https://github.com/certbot/certbot /opt/letsencrypt
-  echo '[Success] letsencrypt is built!'
+  echo '[Starting] installing certbot!'
+  apt-get install certbot -y
+  echo '[Success] certbot is installed!'
   cd /opt/letsencrypt
   echo '[Starting] to build letsencrypt cert!'
-  ./letsencrypt-auto --apache -d $domain -n --register-unsafely-without-email --agree-tos 
+  certbot certonly --standalone -d $domain -n --register-unsafely-without-email --agree-tos
   if [ -e /etc/letsencrypt/live/$domain/fullchain.pem ]; then
     echo '[Success] letsencrypt certs are built!'
-    service apache2 stop
-    echo '[Info] Apache service stopped'
   else
     echo "[ERROR] letsencrypt certs failed to build.  Check that DNS A record is properly configured for this domain"
-    service apache2 stop
-    echo "[Info] Apache service stopped"
     exit 1
   fi
 }
